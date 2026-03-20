@@ -1,8 +1,11 @@
 // Copyright 2024 MobileShooter. All Rights Reserved.
 
 #include "GameInstance/MobileShooterGameInstance.h"
+#include "GameInstance/MSProgressSave.h"
+#include "Weapon/WeaponBase.h"
 #include "Kismet/GameplayStatics.h"
-#include "GameFramework/SaveGame.h"
+
+const FString UMobileShooterGameInstance::SaveSlotName = TEXT("PlayerProfile");
 
 UMobileShooterGameInstance::UMobileShooterGameInstance()
 {
@@ -32,24 +35,69 @@ void UMobileShooterGameInstance::AddXP(int32 XPAmount)
 
 void UMobileShooterGameInstance::SavePlayerData()
 {
-	// TODO: Serialize the following fields to a USaveGame-derived class (e.g. UMSSaveGame)
-	// and write it via UGameplayStatics::AsyncSaveGameToSlot with slot name "PlayerProfile".
-	// Fields to persist:
-	//   - LocalPlayerName    (FString)
-	//   - TotalKills         (int32)
-	//   - TotalMatches       (int32)
-	//   - PlayerLevel        (int32)
-	//   - CurrentXP          (int32)
-	//   - UnlockedWeapons    (TArray<FSoftClassPath> serialized from TSubclassOf pointers)
-	//   - SavedLoadout       (FPlayerLoadout – primary/secondary/equipment soft-class references)
-	// Migration: bump a save-version integer in the save object so future changes can
-	// apply defaults for newly added fields when loading an older save file.
+	UMSProgressSave* SaveObject = Cast<UMSProgressSave>(
+		UGameplayStatics::CreateSaveGameObject(UMSProgressSave::StaticClass()));
+
+	if (!SaveObject)
+	{
+		return;
+	}
+
+	SaveObject->PlayerName    = LocalPlayerName;
+	SaveObject->PlayerLevel   = PlayerLevel;
+	SaveObject->CurrentXP     = CurrentXP;
+	SaveObject->TotalKills    = TotalKills;
+	SaveObject->TotalMatches  = TotalMatches;
+
+	// Serialize weapon class references as FSoftClassPath (relocate-safe)
+	if (SavedLoadout.PrimaryWeapon)
+	{
+		SaveObject->PrimaryWeaponClass = FSoftClassPath(SavedLoadout.PrimaryWeapon.Get());
+	}
+	if (SavedLoadout.SecondaryWeapon)
+	{
+		SaveObject->SecondaryWeaponClass = FSoftClassPath(SavedLoadout.SecondaryWeapon.Get());
+	}
+
+	UGameplayStatics::AsyncSaveGameToSlot(SaveObject, SaveSlotName, 0);
 }
 
 void UMobileShooterGameInstance::LoadPlayerData()
 {
-	// TODO: Call UGameplayStatics::LoadGameFromSlot("PlayerProfile", 0) and cast to UMSSaveGame.
-	// Restore all fields listed above.  On first-run (slot absent) keep the defaults defined
-	// in the constructor.  On version mismatch, apply field-level defaults for missing data
-	// rather than discarding the whole save.
+	if (!UGameplayStatics::DoesSaveGameExist(SaveSlotName, 0))
+	{
+		return;
+	}
+
+	UMSProgressSave* SaveObject = Cast<UMSProgressSave>(
+		UGameplayStatics::LoadGameFromSlot(SaveSlotName, 0));
+
+	if (!SaveObject)
+	{
+		return;
+	}
+
+	LocalPlayerName = SaveObject->PlayerName;
+	PlayerLevel     = FMath::Max(1, SaveObject->PlayerLevel);
+	CurrentXP       = FMath::Max(0, SaveObject->CurrentXP);
+	TotalKills      = FMath::Max(0, SaveObject->TotalKills);
+	TotalMatches    = FMath::Max(0, SaveObject->TotalMatches);
+
+	// Restore weapon classes from saved soft paths
+	if (SaveObject->PrimaryWeaponClass.IsValid())
+	{
+		UClass* PrimaryClass = SaveObject->PrimaryWeaponClass.TryLoadClass<AWeaponBase>();
+		if (PrimaryClass)
+		{
+			SavedLoadout.PrimaryWeapon = PrimaryClass;
+		}
+	}
+	if (SaveObject->SecondaryWeaponClass.IsValid())
+	{
+		UClass* SecondaryClass = SaveObject->SecondaryWeaponClass.TryLoadClass<AWeaponBase>();
+		if (SecondaryClass)
+		{
+			SavedLoadout.SecondaryWeapon = SecondaryClass;
+		}
+	}
 }

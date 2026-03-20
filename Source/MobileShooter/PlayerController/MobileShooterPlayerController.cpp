@@ -102,6 +102,46 @@ void AMobileShooterPlayerController::OnJumpButtonPressed()
 	}
 }
 
+void AMobileShooterPlayerController::OnCrouchButtonPressed()
+{
+	if (ControlledCharacter)
+	{
+		ControlledCharacter->StartCrouch();
+	}
+}
+
+void AMobileShooterPlayerController::OnCrouchButtonReleased()
+{
+	if (ControlledCharacter)
+	{
+		ControlledCharacter->StopCrouch();
+	}
+}
+
+void AMobileShooterPlayerController::OnADSButtonPressed()
+{
+	if (ControlledCharacter)
+	{
+		ControlledCharacter->StartADS();
+	}
+}
+
+void AMobileShooterPlayerController::OnADSButtonReleased()
+{
+	if (ControlledCharacter)
+	{
+		ControlledCharacter->StopADS();
+	}
+}
+
+void AMobileShooterPlayerController::OnSwapWeaponButtonPressed()
+{
+	if (ControlledCharacter)
+	{
+		ControlledCharacter->SwapWeapon();
+	}
+}
+
 void AMobileShooterPlayerController::OnMoveInput(FVector2D MoveVector)
 {
 	if (!ControlledCharacter || MoveVector.IsNearlyZero())

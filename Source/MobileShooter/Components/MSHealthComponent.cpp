@@ -39,9 +39,17 @@ void UMSHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	if (bRegenActive)
 	{
 		TimeSinceLastDamage += DeltaTime;
+
+		// Health regen
 		if (TimeSinceLastDamage >= RegenDelay && CurrentHealth < MaxHealth)
 		{
 			Heal(RegenRate * DeltaTime);
+		}
+
+		// Shield regen (uses a longer delay so it kicks in after health)
+		if (bShieldRegen && TimeSinceLastDamage >= ShieldRegenDelay && CurrentShield < MaxShield)
+		{
+			RestoreShield(ShieldRegenRate * DeltaTime);
 		}
 	}
 }
@@ -103,6 +111,11 @@ float UMSHealthComponent::GetHealthPercent() const
 	return MaxHealth > 0.f ? CurrentHealth / MaxHealth : 0.f;
 }
 
+float UMSHealthComponent::GetShieldPercent() const
+{
+	return MaxShield > 0.f ? CurrentShield / MaxShield : 0.f;
+}
+
 void UMSHealthComponent::OnRep_CurrentHealth()
 {
 	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
@@ -110,5 +123,5 @@ void UMSHealthComponent::OnRep_CurrentHealth()
 
 void UMSHealthComponent::OnRep_CurrentShield()
 {
-	// Clients can respond to shield changes here
+	OnShieldChanged.Broadcast(CurrentShield, MaxShield);
 }

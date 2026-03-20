@@ -83,4 +83,7 @@ public:
 private:
 	/** XP required per level (linear scale) */
 	static constexpr int32 XPPerLevel = 1000;
+
+	/** Save slot name used for USaveGame persistence */
+	static const FString SaveSlotName;
 };

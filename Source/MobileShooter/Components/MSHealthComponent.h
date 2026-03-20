@@ -7,6 +7,7 @@
 #include "MSHealthComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged, float, NewHealth, float, MaxHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnShieldChanged, float, NewShield, float, MaxShield);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDead);
 
 /**
@@ -39,6 +40,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health|Regen")
 	bool bAutoRegen = true;
 
+	/** Whether the shield also regenerates automatically */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health|Regen")
+	bool bShieldRegen = true;
+
+	/** Extra seconds after taking damage before shield regeneration starts (stacked on top of RegenDelay) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health|Regen")
+	float ShieldRegenDelay = 8.f;
+
+	/** Shield regenerated per second */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health|Regen")
+	float ShieldRegenRate = 15.f;
+
 	// ─── State ────────────────────────────────────────────────────────────
 
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentHealth, BlueprintReadOnly, Category = "Health")
@@ -51,6 +64,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Health|Events")
 	FOnHealthChanged OnHealthChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Health|Events")
+	FOnShieldChanged OnShieldChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Health|Events")
 	FOnDead OnDead;
@@ -77,6 +93,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Health")
 	float GetHealthPercent() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Health")
+	float GetShieldPercent() const;
 
 	// ─── Overrides ────────────────────────────────────────────────────────
 

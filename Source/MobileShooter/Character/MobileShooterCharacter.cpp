@@ -4,6 +4,7 @@
 #include "Weapon/WeaponBase.h"
 #include "Components/MSHealthComponent.h"
 #include "GameMode/MobileShooterGameMode.h"
+#include "PlayerState/MobileShooterPlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -45,6 +46,12 @@ void AMobileShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Cache the camera's default FOV for ADS interpolation
+	if (FollowCamera)
+	{
+		DefaultCameraFOV = FollowCamera->FieldOfView;
+	}
+
 	if (HasAuthority())
 	{
 		SpawnDefaultLoadout();
@@ -54,6 +61,14 @@ void AMobileShooterCharacter::BeginPlay()
 void AMobileShooterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// Smoothly interpolate camera FOV for ADS
+	if (FollowCamera)
+	{
+		const float TargetFOV = bIsAiming ? DefaultCameraFOV * ADSFOVMultiplier : DefaultCameraFOV;
+		FollowCamera->FieldOfView = FMath::FInterpTo(FollowCamera->FieldOfView, TargetFOV,
+		                                              DeltaTime, ADSInterpSpeed);
+	}
 }
 
 void AMobileShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -65,6 +80,7 @@ void AMobileShooterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AMobileShooterCharacter, CurrentWeapon);
+	DOREPLIFETIME(AMobileShooterCharacter, SecondaryWeapon);
 	DOREPLIFETIME(AMobileShooterCharacter, MovementState);
 }
 
@@ -90,6 +106,29 @@ void AMobileShooterCharacter::EquipWeapon(AWeaponBase* WeaponToEquip)
 	CurrentWeapon->AttachToComponent(GetMesh(),
 	                                  FAttachmentTransformRules::SnapToTargetIncludingScale,
 	                                  WeaponAttachSocketName);
+}
+
+void AMobileShooterCharacter::SwapWeapon()
+{
+	if (!HasAuthority() || bIsDead || !SecondaryWeapon)
+	{
+		return;
+	}
+
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StopFire();
+		HideWeapon(CurrentWeapon);
+	}
+
+	AWeaponBase* OldPrimary = CurrentWeapon;
+	CurrentWeapon   = SecondaryWeapon;
+	SecondaryWeapon = OldPrimary;
+
+	if (CurrentWeapon)
+	{
+		ShowWeapon(CurrentWeapon);
+	}
 }
 
 void AMobileShooterCharacter::StartFire()
@@ -118,14 +157,59 @@ void AMobileShooterCharacter::Reload()
 
 void AMobileShooterCharacter::StartSprint()
 {
+	if (bIsAiming)
+	{
+		StopADS();
+	}
 	GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
 	MovementState = EMovementState::Running;
 }
 
 void AMobileShooterCharacter::StopSprint()
 {
-	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = bIsAiming ? ADSWalkSpeed : WalkSpeed;
 	MovementState = EMovementState::Walking;
+}
+
+void AMobileShooterCharacter::StartCrouch()
+{
+	if (!bIsDead)
+	{
+		Crouch();
+		GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
+		MovementState = EMovementState::Crouching;
+	}
+}
+
+void AMobileShooterCharacter::StopCrouch()
+{
+	UnCrouch();
+	GetCharacterMovement()->MaxWalkSpeed = bIsAiming ? ADSWalkSpeed : WalkSpeed;
+	MovementState = EMovementState::Walking;
+}
+
+void AMobileShooterCharacter::StartADS()
+{
+	if (bIsDead)
+	{
+		return;
+	}
+
+	// Sprinting and ADS are mutually exclusive — cancel sprint first
+	if (MovementState == EMovementState::Running)
+	{
+		StopSprint();
+	}
+
+	bIsAiming = true;
+	GetCharacterMovement()->MaxWalkSpeed = ADSWalkSpeed;
+}
+
+void AMobileShooterCharacter::StopADS()
+{
+	bIsAiming = false;
+	GetCharacterMovement()->MaxWalkSpeed =
+		(MovementState == EMovementState::Crouching) ? CrouchSpeed : WalkSpeed;
 }
 
 float AMobileShooterCharacter::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent,
@@ -141,6 +225,14 @@ float AMobileShooterCharacter::TakeDamage(float DamageAmount, const FDamageEvent
 	if (EventInstigator)
 	{
 		LastDamageInstigator = EventInstigator;
+
+		// Accumulate damage dealt by each contributor for assist detection
+		if (HasAuthority())
+		{
+			TWeakObjectPtr<AController> InstigatorPtr(EventInstigator);
+			float& Accumulated = DamageContributors.FindOrAdd(InstigatorPtr);
+			Accumulated += Damage;
+		}
 	}
 
 	HealthComponent->ApplyDamage(Damage);
@@ -162,9 +254,32 @@ void AMobileShooterCharacter::OnDeath_Implementation(AController* KillerControll
 {
 	bIsDead = true;
 
+	if (bIsAiming)
+	{
+		StopADS();
+	}
+
 	if (CurrentWeapon)
 	{
 		CurrentWeapon->StopFire();
+	}
+
+	// Award assists to any contributor who dealt damage but is not the killer
+	if (HasAuthority())
+	{
+		for (auto& Pair : DamageContributors)
+		{
+			AController* Contributor = Pair.Key.Get();
+			if (Contributor && Contributor != KillerController)
+			{
+				AMobileShooterPlayerState* PS = Contributor->GetPlayerState<AMobileShooterPlayerState>();
+				if (PS)
+				{
+					PS->AddAssist();
+				}
+			}
+		}
+		DamageContributors.Empty();
 	}
 
 	// Notify game mode
@@ -182,9 +297,16 @@ void AMobileShooterCharacter::OnRep_CurrentWeapon()
 	// Re-attach on clients after replication
 	if (CurrentWeapon)
 	{
-		CurrentWeapon->AttachToComponent(GetMesh(),
-		                                  FAttachmentTransformRules::SnapToTargetIncludingScale,
-		                                  WeaponAttachSocketName);
+		ShowWeapon(CurrentWeapon);
+	}
+}
+
+void AMobileShooterCharacter::OnRep_SecondaryWeapon()
+{
+	// Keep secondary weapon hidden on clients
+	if (SecondaryWeapon)
+	{
+		HideWeapon(SecondaryWeapon);
 	}
 }
 
@@ -207,20 +329,57 @@ void AMobileShooterCharacter::OnRep_MovementState()
 
 void AMobileShooterCharacter::SpawnDefaultLoadout()
 {
-	if (!DefaultLoadout.PrimaryWeapon)
+	FActorSpawnParameters Params;
+	Params.Owner     = this;
+	Params.Instigator = this;
+
+	if (DefaultLoadout.PrimaryWeapon)
+	{
+		AWeaponBase* SpawnedPrimary = GetWorld()->SpawnActor<AWeaponBase>(
+			DefaultLoadout.PrimaryWeapon, FVector::ZeroVector, FRotator::ZeroRotator, Params);
+
+		if (SpawnedPrimary)
+		{
+			CurrentWeapon = SpawnedPrimary;
+			CurrentWeapon->SetOwner(this);
+			ShowWeapon(CurrentWeapon);
+		}
+	}
+
+	if (DefaultLoadout.SecondaryWeapon)
+	{
+		AWeaponBase* SpawnedSecondary = GetWorld()->SpawnActor<AWeaponBase>(
+			DefaultLoadout.SecondaryWeapon, FVector::ZeroVector, FRotator::ZeroRotator, Params);
+
+		if (SpawnedSecondary)
+		{
+			SecondaryWeapon = SpawnedSecondary;
+			SecondaryWeapon->SetOwner(this);
+			HideWeapon(SecondaryWeapon);
+		}
+	}
+}
+
+void AMobileShooterCharacter::HideWeapon(AWeaponBase* Weapon)
+{
+	if (!Weapon)
 	{
 		return;
 	}
+	Weapon->SetActorHiddenInGame(true);
+	Weapon->SetActorEnableCollision(false);
+	Weapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+}
 
-	FActorSpawnParameters Params;
-	Params.Owner = this;
-	Params.Instigator = this;
-
-	AWeaponBase* SpawnedWeapon = GetWorld()->SpawnActor<AWeaponBase>(
-		DefaultLoadout.PrimaryWeapon, FVector::ZeroVector, FRotator::ZeroRotator, Params);
-
-	if (SpawnedWeapon)
+void AMobileShooterCharacter::ShowWeapon(AWeaponBase* Weapon)
+{
+	if (!Weapon)
 	{
-		EquipWeapon(SpawnedWeapon);
+		return;
 	}
+	Weapon->SetActorHiddenInGame(false);
+	Weapon->SetActorEnableCollision(false); // Weapons don't need world collision when held
+	Weapon->AttachToComponent(GetMesh(),
+	                           FAttachmentTransformRules::SnapToTargetIncludingScale,
+	                           WeaponAttachSocketName);
 }

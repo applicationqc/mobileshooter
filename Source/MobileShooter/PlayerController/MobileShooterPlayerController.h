@@ -65,6 +65,26 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void OnJumpButtonPressed();
 
+	/** Crouch button pressed */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void OnCrouchButtonPressed();
+
+	/** Crouch button released */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void OnCrouchButtonReleased();
+
+	/** Aim Down Sights button pressed */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void OnADSButtonPressed();
+
+	/** Aim Down Sights button released */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void OnADSButtonReleased();
+
+	/** Swap weapon button pressed */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void OnSwapWeaponButtonPressed();
+
 	/** Joystick move input (virtual joystick on mobile) */
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void OnMoveInput(FVector2D MoveVector);
