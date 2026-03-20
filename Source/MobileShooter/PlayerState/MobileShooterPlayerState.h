@@ -34,6 +34,14 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_Team, BlueprintReadOnly, Category = "Stats")
 	ETeam Team = ETeam::NoTeam;
 
+	/** Current unbroken kill streak (resets on death) */
+	UPROPERTY(ReplicatedUsing = OnRep_KillStreak, BlueprintReadOnly, Category = "Stats")
+	int32 KillStreak = 0;
+
+	/** Longest kill streak achieved this match */
+	UPROPERTY(BlueprintReadOnly, Category = "Stats")
+	int32 BestKillStreak = 0;
+
 	// ─── Interface ────────────────────────────────────────────────────────
 
 	UFUNCTION(BlueprintCallable, Category = "Stats")
@@ -57,6 +65,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Stats")
 	int32 GetAssists() const { return Assists; }
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Stats")
+	int32 GetKillStreak() const { return KillStreak; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Stats")
+	int32 GetBestKillStreak() const { return BestKillStreak; }
+
 	/** K/D ratio (returns 0 when deaths == 0) */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Stats")
 	float GetKDRatio() const;
@@ -77,4 +91,7 @@ protected:
 
 	UFUNCTION()
 	void OnRep_Team();
+
+	UFUNCTION()
+	void OnRep_KillStreak();
 };

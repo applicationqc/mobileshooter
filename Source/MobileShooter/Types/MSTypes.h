@@ -148,5 +148,8 @@ struct FMatchResult
 	int32 Score = 0;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Match")
+	int32 KillStreak = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Match")
 	ETeam Team = ETeam::NoTeam;
 };

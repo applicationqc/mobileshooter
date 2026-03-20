@@ -53,6 +53,10 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentWeapon, BlueprintReadOnly, Category = "Weapon")
 	TObjectPtr<AWeaponBase> CurrentWeapon;
 
+	/** Weapon stored in slot 2 (secondary) */
+	UPROPERTY(ReplicatedUsing = OnRep_SecondaryWeapon, BlueprintReadOnly, Category = "Weapon")
+	TObjectPtr<AWeaponBase> SecondaryWeapon;
+
 	/** Default loadout applied on spawn */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	FPlayerLoadout DefaultLoadout;
@@ -79,6 +83,20 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	float CrouchSpeed = 200.f;
 
+	// ─── ADS ──────────────────────────────────────────────────────────────
+
+	/** Field-of-view multiplier when aiming down sights (< 1 zooms in) */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ADS")
+	float ADSFOVMultiplier = 0.65f;
+
+	/** Interpolation speed for ADS camera zoom transition */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ADS")
+	float ADSInterpSpeed = 10.f;
+
+	/** Walk speed while aiming down sights */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ADS")
+	float ADSWalkSpeed = 250.f;
+
 	// ─── Interface ────────────────────────────────────────────────────────
 
 	/** IAbilitySystemInterface */
@@ -87,6 +105,10 @@ public:
 	/** Equip a weapon */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void EquipWeapon(AWeaponBase* WeaponToEquip);
+
+	/** Swap between primary and secondary weapon */
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SwapWeapon();
 
 	/** Start firing */
 	UFUNCTION(BlueprintCallable, Category = "Combat")
@@ -107,6 +129,26 @@ public:
 	/** Stop sprinting */
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void StopSprint();
+
+	/** Begin crouching */
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void StartCrouch();
+
+	/** Stop crouching */
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void StopCrouch();
+
+	/** Enter Aim Down Sights mode */
+	UFUNCTION(BlueprintCallable, Category = "ADS")
+	void StartADS();
+
+	/** Exit Aim Down Sights mode */
+	UFUNCTION(BlueprintCallable, Category = "ADS")
+	void StopADS();
+
+	/** True when the character is aiming down sights */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ADS")
+	bool IsAiming() const { return bIsAiming; }
 
 	/** Apply damage to this character */
 	UFUNCTION(BlueprintCallable, Category = "Combat")
@@ -139,14 +181,32 @@ protected:
 	void OnRep_CurrentWeapon();
 
 	UFUNCTION()
+	void OnRep_SecondaryWeapon();
+
+	UFUNCTION()
 	void OnRep_MovementState();
 
 private:
 	/** Spawn and attach the default loadout weapons */
 	void SpawnDefaultLoadout();
 
+	/** Hide a weapon by detaching it and disabling its visibility */
+	void HideWeapon(AWeaponBase* Weapon);
+
+	/** Show a weapon by re-attaching it */
+	void ShowWeapon(AWeaponBase* Weapon);
+
 	/** Last controller that dealt damage (for kill credit) */
 	TWeakObjectPtr<AController> LastDamageInstigator;
 
+	/** Map of controllers that dealt damage this life (for assist awards) */
+	TMap<TWeakObjectPtr<AController>, float> DamageContributors;
+
 	bool bIsDead = false;
+
+	/** True while the character is aiming down sights */
+	bool bIsAiming = false;
+
+	/** Default (non-ADS) camera field of view, cached on BeginPlay */
+	float DefaultCameraFOV = 90.f;
 };

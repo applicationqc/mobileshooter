@@ -17,12 +17,18 @@ Customize your loadout, unlock powerful gear, and upgrade your arsenal to domina
 | **Real-time multiplayer** | Authoritative server, full UE5 replication, up to 10 players per match |
 | **Weapon variety** | Assault Rifle · Sniper Rifle · Shotgun · SMG · Pistol · Rocket Launcher |
 | **Weapon upgrades** | Damage, range, fire-rate, and cosmetic upgrades via progression system |
+| **Dual weapon slots** | Primary + Secondary weapon slots with instant hot-swap |
 | **Multiple game modes** | Team Deathmatch · Free-for-All · Capture The Flag · Domination · Battle Royale |
 | **Dynamic maps** | Desert · Urban · Jungle (placeholder maps; swap your own UE5 levels) |
 | **Mobile controls** | Virtual joysticks, touch-to-fire button layout, tilt-to-look support |
+| **ADS (Aim Down Sights)** | Smooth FOV-interpolated zoom with reduced movement speed while aiming |
+| **Crouch** | Full crouch support with reduced speed and collision height |
 | **Graphics** | Nanite, Lumen, TSR (Temporal Super Resolution), mobile scalability settings |
 | **Sound** | Immersive weapon SFX, positional audio, dynamic music via Audio Modulation |
-| **Progression** | XP / levelling system, loadout saves, unlockable weapons |
+| **Progression** | XP / levelling system, loadout saves, unlockable weapons, persistent save data |
+| **Kill streaks** | Unbroken kill streaks rewarded with score bonuses (×3, ×5, ×7, ×10+) |
+| **Assists** | Damage contributors who don't get the kill receive an assist and bonus score |
+| **Shield regeneration** | Shields auto-regenerate after a delay (configurable rate, separate from health) |
 | **AI Bots** | Behavior-Tree driven bot opponents fill lobbies when human players are short |
 
 ---
@@ -48,7 +54,9 @@ MobileShooter/
         │   ├── WeaponBase.h/.cpp               # Abstract weapon (fire, reload, replication)
         │   ├── AssaultRifle.h/.cpp             # Full-auto AR
         │   ├── SniperRifle.h/.cpp              # Bolt-action sniper w/ scope
-        │   └── Shotgun.h/.cpp                  # Multi-pellet shotgun
+        │   ├── Shotgun.h/.cpp                  # Multi-pellet shotgun
+        │   ├── SMG.h/.cpp                      # Fast-fire submachine gun
+        │   └── Pistol.h/.cpp                   # Semi-auto sidearm
         ├── GameMode/
         │   ├── MobileShooterGameMode.h/.cpp    # Base game mode (lifecycle, respawn)
         │   ├── TeamDeathmatchGameMode.h/.cpp   # TDM variant

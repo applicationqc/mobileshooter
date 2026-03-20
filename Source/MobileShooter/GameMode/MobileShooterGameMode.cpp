@@ -120,6 +120,7 @@ TArray<FMatchResult> AMobileShooterGameMode::GetMatchResults() const
 			Result.Deaths     = PS->GetDeaths();
 			Result.Assists    = PS->GetAssists();
 			Result.Score      = static_cast<int32>(PS->GetScore());
+			Result.KillStreak = PS->GetBestKillStreak();
 			Results.Add(Result);
 		}
 	}
