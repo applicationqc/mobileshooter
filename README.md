@@ -1,6 +1,6 @@
 # MobileShooter 🔫
 
-> **Unreal Engine 5.7** · Mobile-first · Real-time Multiplayer
+> **Unreal Engine 5.5** · Mobile-first · Real-time Multiplayer
 
 Step into the battlefield and prove your skills in this fast-paced mobile shooter!
 
@@ -37,7 +37,7 @@ Customize your loadout, unlock powerful gear, and upgrade your arsenal to domina
 
 ```
 MobileShooter/
-├── MobileShooter.uproject          # UE5.7 project descriptor
+├── MobileShooter.uproject          # UE5.5 project descriptor
 ├── Config/
 │   ├── DefaultEngine.ini           # Renderer, network, mobile settings
 │   ├── DefaultGame.ini             # Game maps, modes, packaging settings
@@ -81,7 +81,7 @@ MobileShooter/
 
 ### Prerequisites
 
-- **Unreal Engine 5.7** installed via the Epic Games Launcher
+- **Unreal Engine 5.5** installed via the Epic Games Launcher
 - Visual Studio 2022 (Windows) or Xcode 15+ (macOS)
 - Android SDK / iOS SDK for mobile builds
 
