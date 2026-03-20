@@ -1,0 +1,65 @@
+# Unreal Engine build artifacts
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+.vscode/
+*.sln
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.VC.opendb
+
+# Compiled object files
+*.obj
+*.o
+
+# Precompiled headers
+*.pch
+*.gch
+
+# Compiled dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled static libraries
+*.lib
+*.a
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Xcode / Mac
+*.xcworkspace
+*.xcodeproj
+xcuserdata/
+*.DS_Store
+
+# Android
+*.apk
+*.aab
+
+# iOS
+*.ipa
+*.xcarchive
+
+# Log files
+*.log
+
+# Editor backup files
+*_Backup*
+*.tmp
+
+# Content - binary assets (kept source files only)
+# Content/ is tracked but the following are excluded:
+Content/**/*.uasset
+Content/**/*.umap
+
+# Exclude clang compile commands
+compile_commands.json
